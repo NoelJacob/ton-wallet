@@ -186,6 +186,10 @@ class View {
 
         $('#connectLedger_cancelBtn').addEventListener('click', () => this.closePopup());
 
+        $('#main_buyBtn').addEventListener('click', () => {
+            window.open('https://exchange.mercuryo.io/?currency=TONCOIN&address=' + this.myAddress, '_blank');
+        });
+
         $('#send_btn').addEventListener('click', () => {
             const amount = Number($('#amountInput').value);
             const amountNano = toNano(amount);
