@@ -42,7 +42,7 @@ async function encrypt(plaintext, password) {
 
     const iv = crypto.getRandomValues(new Uint8Array(12));                             // get 96-bit random iv
 
-    const alg = {name: 'AES-GCM', iv: iv};                                           // specify algorithm to use
+    const alg = { name: 'AES-GCM', iv: iv };                                           // specify algorithm to use
 
     const key = await crypto.subtle.importKey('raw', pwHash, alg, false, ['encrypt']); // generate key from pw
 
@@ -69,7 +69,7 @@ async function decrypt(ciphertext, password) {
 
     const iv = ciphertext.slice(0, 24).match(/.{2}/g).map(byte => parseInt(byte, 16));   // get iv from ciphertext
 
-    const alg = {name: 'AES-GCM', iv: new Uint8Array(iv)};                            // specify algorithm to use
+    const alg = { name: 'AES-GCM', iv: new Uint8Array(iv) };                            // specify algorithm to use
 
     const key = await crypto.subtle.importKey('raw', pwHash, alg, false, ['decrypt']);  // use pw to generate key
 
@@ -82,6 +82,11 @@ async function decrypt(ciphertext, password) {
 
     return plaintext;                                                                   // return the plaintext
 }
+
+// CONTROLLER
+
+const IS_TESTNET = window.location.href.indexOf('testnet') > -1;
+const IS_EXTENSION = !!(window.chrome && chrome.runtime && chrome.runtime.onConnect);
 
 const ACCOUNT_NUMBER = 0;
 
@@ -120,16 +125,19 @@ class Controller {
             window.view.controller = this;
         }
 
-        // Send current testnet state to View
-        this.sendToView('setIsTestnet', this.isTestnet);
+        const mainnetRpc = 'https://toncenter.com/api/v2/jsonRPC';
+        const testnetRpc = 'https://testnet.toncenter.com/api/v2/jsonRPC';
+        const apiKey = '4f96a149e04e0821d20f9e99ee716e20ff52db7238f38663226b1c0f303003e0';
+        const extensionApiKey = '503af517296765c3f1729fcb301b063a00650a50a881eeaddb6307d5d45e21aa';
+        this.sendToView('setIsTestnet', IS_TESTNET)
 
         localStorage.removeItem('pwdHash');
 
-        this.ton = new TonWeb(new TonWeb.HttpProvider(this.isTestnet ? TESTNET_RPC : MAINNET_RPC));
+        this.ton = new TonWeb(new TonWeb.HttpProvider(IS_TESTNET ? testnetRpc : mainnetRpc, { apiKey: IS_EXTENSION ? extensionApiKey : apiKey }));
         this.myAddress = localStorage.getItem('address');
         if (!this.myAddress || !localStorage.getItem('words')) {
             localStorage.clear();
-            this.sendToView('showScreen', {name: 'start'})
+            this.sendToView('showScreen', { name: 'start' })
         } else {
             if (localStorage.getItem('isLedger') === 'true') {
                 this.isLedger = true;
@@ -258,7 +266,7 @@ class Controller {
     // CREATE WALLET
 
     async showCreated() {
-        this.sendToView('showScreen', {name: 'created'});
+        this.sendToView('showScreen', { name: 'created' });
         this.sendToView('disableCreated', true);
         this.myMnemonicWords = await TonWeb.mnemonic.generateMnemonic();
         const privateKey = await Controller.wordsToPrivateKey(this.myMnemonicWords);
@@ -284,16 +292,16 @@ class Controller {
         this.afterEnterPassword = async mnemonicWords => {
             this.showBackup(mnemonicWords);
         };
-        this.sendToView('showPopup', {name: 'enterPassword'});
+        this.sendToView('showPopup', { name: 'enterPassword' });
     }
 
     showBackup(words) {
-        this.sendToView('showScreen', {name: 'backup', words});
+        this.sendToView('showScreen', { name: 'backup', words });
     }
 
     onBackupDone() {
         if (localStorage.getItem('words')) {
-            this.sendToView('showScreen', {name: 'main'});
+            this.sendToView('showScreen', { name: 'main' });
         } else {
             this.showCreatePassword();
         }
@@ -324,7 +332,7 @@ class Controller {
             alert('Please update your Ledger TON-app to v2.0.1 or upper or use old wallet version https://tonwallet.me/prev/')
             throw new Error('outdated ledger ton-app version');
         }
-        const {publicKey} = await this.ledgerApp.getPublicKey(ACCOUNT_NUMBER, false); // todo: можно сохранять publicKey и не запрашивать это
+        const { publicKey } = await this.ledgerApp.getPublicKey(ACCOUNT_NUMBER, false); // todo: можно сохранять publicKey и не запрашивать это
 
         const WalletClass = this.ton.wallet.all[DEFAULT_LEDGER_WALLET_VERSION];
         const wallet = new WalletClass(this.ton.provider, {
@@ -347,13 +355,13 @@ class Controller {
         localStorage.setItem('words', 'ledger');
         localStorage.setItem('publicKey', this.publicKeyHex);
         this.sendToView('setIsLedger', this.isLedger);
-        this.sendToView('showScreen', {name: 'readyToGo'});
+        this.sendToView('showScreen', { name: 'readyToGo' });
     }
 
     // IMPORT WALLET
 
     showImport() {
-        this.sendToView('showScreen', {name: 'import'});
+        this.sendToView('showScreen', { name: 'import' });
     }
 
     async import(words) {
@@ -373,7 +381,7 @@ class Controller {
                 const walletInfo = await this.ton.provider.getWalletInfo(walletAddress);
                 const walletBalance = this.getBalance(walletInfo);
                 if (walletBalance.gt(new BN(0))) {
-                    hasBalance.push({balance: walletBalance, clazz: WalletClass});
+                    hasBalance.push({ balance: walletBalance, clazz: WalletClass });
                 }
                 console.log(wallet.getName(), walletAddress, walletInfo, walletBalance.toString());
             }
@@ -404,7 +412,7 @@ class Controller {
     // PASSWORD
 
     showCreatePassword() {
-        this.sendToView('showScreen', {name: 'createPassword'});
+        this.sendToView('showScreen', { name: 'createPassword' });
     }
 
     async savePrivateKey(password) {
@@ -415,7 +423,7 @@ class Controller {
         this.myMnemonicWords = null;
 
         this.sendToView('setIsLedger', this.isLedger);
-        this.sendToView('showScreen', {name: 'readyToGo'});
+        this.sendToView('showScreen', { name: 'readyToGo' });
     }
 
     async onChangePassword(oldPassword, newPassword) {
@@ -446,7 +454,7 @@ class Controller {
     // MAIN
 
     showMain() {
-        this.sendToView('showScreen', {name: 'main', myAddress: this.myAddress});
+        this.sendToView('showScreen', { name: 'main', myAddress: this.myAddress });
         if (!this.walletContract) {
             const walletVersion = localStorage.getItem('walletVersion');
             const walletClass = walletVersion ? this.ton.wallet.all[walletVersion] : this.ton.wallet.default;
@@ -469,11 +477,11 @@ class Controller {
 
     initView() {
         if (!this.myAddress || !localStorage.getItem('words')) {
-            this.sendToView('showScreen', {name: 'start'})
+            this.sendToView('showScreen', { name: 'start' })
         } else {
-            this.sendToView('showScreen', {name: 'main', myAddress: this.myAddress});
+            this.sendToView('showScreen', { name: 'main', myAddress: this.myAddress });
             if (this.balance !== null) {
-                this.sendToView('setBalance', {balance: this.balance.toString(), txs: this.transactions});
+                this.sendToView('setBalance', { balance: this.balance.toString(), txs: this.transactions });
             }
         }
         this.sendToView('setIsMagic', localStorage.getItem('magic') === 'true');
@@ -482,6 +490,9 @@ class Controller {
     }
 
     update(force) {
+        // if (!document.hasFocus()) {
+        //     return;
+        // }
         const needUpdate = (this.processingVisible && this.sendingData) || (this.balance === null) || force;
 
         if (!needUpdate) return;
@@ -526,10 +537,10 @@ class Controller {
                         }
                     }
 
-                    this.sendToView('setBalance', {balance: balance.toString(), txs});
+                    this.sendToView('setBalance', { balance: balance.toString(), txs });
                 });
             } else {
-                this.sendToView('setBalance', {balance: balance.toString(), txs: this.transactions});
+                this.sendToView('setBalance', { balance: balance.toString(), txs: this.transactions });
             }
         });
     }
@@ -538,7 +549,7 @@ class Controller {
         if (!this.ledgerApp) {
             await this.createLedger(localStorage.getItem('ledgerTransportType') || 'hid');
         }
-        const {address} = await this.ledgerApp.getAddress(ACCOUNT_NUMBER, true, this.ledgerApp.ADDRESS_FORMAT_USER_FRIENDLY + this.ledgerApp.ADDRESS_FORMAT_URL_SAFE + this.ledgerApp.ADDRESS_FORMAT_BOUNCEABLE);
+        const { address } = await this.ledgerApp.getAddress(ACCOUNT_NUMBER, true, this.ledgerApp.ADDRESS_FORMAT_USER_FRIENDLY + this.ledgerApp.ADDRESS_FORMAT_URL_SAFE + this.ledgerApp.ADDRESS_FORMAT_BOUNCEABLE);
         console.log(address.toString(true, true, true));
     }
 
@@ -607,7 +618,7 @@ class Controller {
 
             this.afterEnterPassword = async words => {
                 this.processingVisible = true;
-                this.sendToView('showPopup', {name: 'processing'});
+                this.sendToView('showPopup', { name: 'processing' });
                 const privateKey = await Controller.wordsToPrivateKey(words);
                 this.send(toAddress, amount, comment, privateKey);
             };
@@ -691,9 +702,9 @@ class Controller {
                 if (!seqno) seqno = 0;
 
                 const query = await this.ledgerApp.transfer(ACCOUNT_NUMBER, this.walletContract, toAddress, amount, seqno, addressFormat);
-                this.sendingData = {toAddress: toAddress, amount: amount, comment: comment, query: query};
+                this.sendingData = { toAddress: toAddress, amount: amount, comment: comment, query: query };
 
-                this.sendToView('showPopup', {name: 'processing'});
+                this.sendToView('showPopup', { name: 'processing' });
                 this.processingVisible = true;
 
                 await this.sendQuery(query);
@@ -702,7 +713,7 @@ class Controller {
 
                 const keyPair = nacl.sign.keyPair.fromSeed(TonWeb.utils.base64ToBytes(privateKey));
                 const query = await this.sign(toAddress, amount, comment, keyPair);
-                this.sendingData = {toAddress: toAddress, amount: amount, comment: comment, query: query};
+                this.sendingData = { toAddress: toAddress, amount: amount, comment: comment, query: query };
                 await this.sendQuery(query);
 
             }
@@ -755,7 +766,7 @@ class Controller {
         this.ledgerApp = null;
         clearInterval(this.updateIntervalId);
         localStorage.clear();
-        this.sendToView('showScreen', {name: 'start'});
+        this.sendToView('showScreen', { name: 'start' });
         this.sendToDapp('ton_accounts', []);
     }
 
@@ -781,7 +792,7 @@ class Controller {
         if (window.view) {
             window.view.onMessage(method, params);
         } else {
-            const msg = {method, params};
+            const msg = { method, params };
             if (popupPort) {
                 popupPort.postMessage(msg);
             } else {
@@ -871,7 +882,7 @@ class Controller {
         if (contentScriptPort) {
             contentScriptPort.postMessage(JSON.stringify({
                 type: 'gramWalletAPI',
-                message: {jsonrpc: '2.0', method: method, params: params}
+                message: { jsonrpc: '2.0', method: method, params: params }
             }));
         }
     }
@@ -915,7 +926,7 @@ class Controller {
 
 const controller = new Controller();
 
-if (chrome.runtime && chrome.runtime.onConnect) {
+if (window.chrome && chrome.runtime && chrome.runtime.onConnect) {
     chrome.runtime.onConnect.addListener(port => {
         if (port.name === 'gramWalletContentScript') {
             contentScriptPort = port;
@@ -925,7 +936,7 @@ if (chrome.runtime && chrome.runtime.onConnect) {
                 if (contentScriptPort) {
                     contentScriptPort.postMessage(JSON.stringify({
                         type: 'gramWalletAPI',
-                        message: {jsonrpc: '2.0', id: msg.message.id, method: msg.message.method, result}
+                        message: { jsonrpc: '2.0', id: msg.message.id, method: msg.message.method, result }
                     }));
                 }
             });

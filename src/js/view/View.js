@@ -108,11 +108,26 @@ class View {
 
         $("#start_createBtn").addEventListener('click', () => this.sendMessage('showScreen', {name: 'created'}));
         $("#start_importBtn").addEventListener('click', () => this.sendMessage('showScreen', {name: 'import'}));
+
+        let needShowLedger = false;
+        try {
+            needShowLedger = window.location.href.indexOf('ledgerReview') > -1;
+        } catch (e) {
+
+        }
+        if (needShowLedger) {
+            toggle($("#start_importLedgerHidBtn"), 'inline-block');
+        }
+
         $("#start_importLedgerHidBtn").addEventListener('click', () => {
             this.showPopup('connectLedger');
             this.sendMessage('showScreen', {name: 'importLedger', transportType: 'hid'})
         });
         // $("#start_importLedgerBleBtn").addEventListener('click', () => this.sendMessage('showScreen', {name: 'importLedger', transportType: 'ble'}));
+
+        // $('#main_buyBtn').addEventListener('click', () => {
+        //     window.open('https://exchange.mercuryo.io/?currency=TONCOIN&address=' + this.myAddress, '_blank');
+        // });
 
         $('#import_alertBtn').addEventListener('click', () => alert('Too Bad. Without the secret words, you can\'t restore access to your wallet.'));
         $('#import_continueBtn').addEventListener('click', async () => this.sendMessage('import', {words: await this.getImportWords()}));
